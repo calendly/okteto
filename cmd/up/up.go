@@ -63,7 +63,8 @@ import (
 const (
 	ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
-	composeVolumesUrl = "https://www.okteto.com/docs/reference/docker-compose/#volumes-string-optional"
+	composeVolumesUrl      = "https://www.okteto.com/docs/reference/docker-compose/#volumes-string-optional"
+	ignoreAppUpdatesEnvVar = "OKTETO_IGNORE_APP_UPDATES"
 )
 
 var (
@@ -651,6 +652,11 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 }
 
 func (up *upContext) applyToApps(ctx context.Context) chan error {
+	if env.LoadBoolean(ignoreAppUpdatesEnvVar) {
+		oktetoLog.Infof("ignoring updates to original applications because %s is enabled", ignoreAppUpdatesEnvVar)
+		return nil
+	}
+
 	k8sClient, _, err := up.K8sClientProvider.Provide(okteto.GetContext().Cfg)
 	if err != nil {
 		return nil

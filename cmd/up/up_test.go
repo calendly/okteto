@@ -68,6 +68,17 @@ func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	}
 }
 
+func Test_applyToApps_IgnoresOriginalAppUpdatesWhenEnvVarEnabled(t *testing.T) {
+	t.Setenv(ignoreAppUpdatesEnvVar, "true")
+
+	up := upContext{
+		K8sClientProvider: test.NewFakeK8sProvider(),
+	}
+
+	result := up.applyToApps(context.Background())
+	require.Nil(t, result)
+}
+
 func Test_printDisplayContext(t *testing.T) {
 	var tests = []struct {
 		up   *upContext
