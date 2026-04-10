@@ -1,0 +1,48 @@
+name: Publish latest master release
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  publish-latest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Compute build metadata
+        id: meta
+        run: |
+          echo "short_sha=$(git rev-parse --short "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+          echo "commit_date=$(git show -s --format=%cI "$GITHUB_SHA")" >> "$GITHUB_OUTPUT"
+
+      - name: Build binaries
+        run: VERSION_STRING=master-${{ steps.meta.outputs.short_sha }} make build-all
+
+      - name: Recreate latest release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --cleanup-tag --yes || true
+          gh release create latest bin/* \
+            --target "$GITHUB_SHA" \
+            --title "latest master build" \
+            --notes "Built from \`master\` at commit \`${GITHUB_SHA}\` on ${{ steps.meta.outputs.commit_date }}."
